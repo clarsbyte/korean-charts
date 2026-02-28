@@ -465,7 +465,7 @@ export default function SimulatorPage() {
         <h1>Pick Your Contenders</h1>
         <p className="hero-copy">
           Drag songs from the lineup onto the stage. Scores combine digital charts (40%), Hanteo
-          album sales (10%), and YouTube views (20%).
+          album sales (10%), and YouTube views (20%). Available songs are those that appear across all major digital charts.
         </p>
         <p className="hero-meta">Updated {updatedLabel || "recently"}</p>
       </section>
