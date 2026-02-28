@@ -282,10 +282,15 @@ export default function SimulatorPage() {
   const [error, setError] = useState<string | null>(null);
   const [stageSlots, setStageSlots] = useState<(Candidate | null)[]>(Array(STAGE_SIZE).fill(null));
   const [youtubeByKey, setYoutubeByKey] = useState<Record<string, YouTubeLookup>>({});
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [dragSrc, setDragSrc] = useState<
     { from: "pool"; candidate: Candidate } | { from: "stage"; slotIndex: number } | null
   >(null);
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
+
+  useEffect(() => {
+    setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -426,6 +431,13 @@ export default function SimulatorPage() {
     setStageSlots((prev) => { const n = [...prev]; n[index] = null; return n; });
   }
 
+  function handlePoolTap(candidate: Candidate) {
+    if (!isTouchDevice) return;
+    const firstEmpty = stageSlots.findIndex((s) => s === null);
+    if (firstEmpty === -1) return;
+    setStageSlots((prev) => { const n = [...prev]; n[firstEmpty] = candidate; return n; });
+  }
+
   const SimNav = () => (
     <nav className="site-nav">
       <Link href="/" className="nav-back">← Back to charts</Link>
@@ -494,6 +506,7 @@ export default function SimulatorPage() {
                 draggable={!onStage}
                 onDragStart={() => !onStage && handlePoolDragStart(c)}
                 onDragEnd={handleDragEnd}
+                onClick={() => !onStage && handlePoolTap(c)}
               >
                 <span className="lcard-handle" aria-hidden>⠿</span>
                 <span className="lcard-text">
