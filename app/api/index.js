@@ -23,6 +23,16 @@ async function getHtml(url, extraHeaders = {}) {
   return response.text();
 }
 
+function decodeHtml(str) {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
 async function scrapeYouTubeVideo(songTitle, artist = "") {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
@@ -71,8 +81,8 @@ async function scrapeYouTubeVideo(songTitle, artist = "") {
   const candidates = items
     .map((item) => {
       const videoId = String(item.id?.videoId || "").trim();
-      const title = String(item.snippet?.title || "").trim();
-      const channel = String(item.snippet?.channelTitle || "").trim();
+      const title = decodeHtml(String(item.snippet?.title || "").trim());
+      const channel = decodeHtml(String(item.snippet?.channelTitle || "").trim());
       const stats = statsMap[videoId] || {};
       const views = Number.parseInt(stats.viewCount || "0", 10) || 0;
       const viewText = views ? `${views.toLocaleString("en-US")} views` : "";
