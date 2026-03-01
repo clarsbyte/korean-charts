@@ -67,6 +67,7 @@ type YouTubeLookup = {
   }>;
   error?: string;
   quotaExceeded?: boolean;
+  rateLimited?: boolean;
 };
 
 // --- Constants ---
@@ -285,6 +286,7 @@ export default function SimulatorPage() {
   const [youtubeByKey, setYoutubeByKey] = useState<Record<string, YouTubeLookup>>({});
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
   const [quotaPopupDismissed, setQuotaPopupDismissed] = useState(false);
+  const [rateLimitedPopup, setRateLimitedPopup] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [dragSrc, setDragSrc] = useState<
     { from: "pool"; candidate: Candidate } | { from: "stage"; slotIndex: number } | null
@@ -337,6 +339,10 @@ export default function SimulatorPage() {
             if (cancelled) return;
             if (payload.quotaExceeded) {
               setYoutubeQuotaExceeded(true);
+              return;
+            }
+            if (payload.rateLimited) {
+              setRateLimitedPopup(true);
               return;
             }
             setYoutubeByKey((prev) => ({
@@ -663,6 +669,49 @@ export default function SimulatorPage() {
         </section>
       )}
     </main>
+
+    {rateLimitedPopup && (
+      <div
+        className="quota-popup-overlay"
+        onClick={() => setRateLimitedPopup(false)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}
+      >
+        <div
+          className="quota-popup"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#fff",
+            borderRadius: "16px",
+            padding: "2rem 1.75rem 1.5rem",
+            maxWidth: "360px",
+            width: "calc(100% - 2rem)",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.6rem",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+          }}
+        >
+          <span className="quota-popup-icon">⏳</span>
+          <p className="quota-popup-title">Slow down!</p>
+          <p className="quota-popup-body">
+            Too many YouTube lookups at once. Wait a minute and try again.
+          </p>
+          <button className="quota-popup-close" onClick={() => setRateLimitedPopup(false)}>
+            Got it
+          </button>
+        </div>
+      </div>
+    )}
 
     {youtubeQuotaExceeded && !quotaPopupDismissed && (
       <div

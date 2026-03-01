@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
   if (!isUnderIpLimit(ip)) {
     return NextResponse.json(
-      { song, artist, error: "Too many requests, please slow down" },
+      { song, artist, error: "Too many requests, please slow down", rateLimited: true },
       { status: 429 },
     );
   }
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
   // Global per-minute burst check
   if (!isUnderPerMinuteLimit()) {
     return NextResponse.json(
-      { song, artist, error: "Too many requests, please slow down" },
+      { song, artist, error: "Too many requests, please slow down", rateLimited: true },
       { status: 429 },
     );
   }
