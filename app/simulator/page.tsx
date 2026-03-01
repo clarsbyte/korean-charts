@@ -66,6 +66,7 @@ type YouTubeLookup = {
     url: string;
   }>;
   error?: string;
+  quotaExceeded?: boolean;
 };
 
 // --- Constants ---
@@ -282,6 +283,8 @@ export default function SimulatorPage() {
   const [error, setError] = useState<string | null>(null);
   const [stageSlots, setStageSlots] = useState<(Candidate | null)[]>(Array(STAGE_SIZE).fill(null));
   const [youtubeByKey, setYoutubeByKey] = useState<Record<string, YouTubeLookup>>({});
+  const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
+  const [quotaPopupDismissed, setQuotaPopupDismissed] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [dragSrc, setDragSrc] = useState<
     { from: "pool"; candidate: Candidate } | { from: "stage"; slotIndex: number } | null
@@ -313,6 +316,7 @@ export default function SimulatorPage() {
   }, [data?.sources]);
 
   useEffect(() => {
+    if (youtubeQuotaExceeded) return;
     const active = stageSlots.filter((s): s is Candidate => s !== null);
     if (!active.length) return;
     let cancelled = false;
@@ -331,6 +335,10 @@ export default function SimulatorPage() {
             );
             const payload = (await response.json()) as YouTubeLookup;
             if (cancelled) return;
+            if (payload.quotaExceeded) {
+              setYoutubeQuotaExceeded(true);
+              return;
+            }
             setYoutubeByKey((prev) => ({
               ...prev,
               [key]: response.ok ? payload : { ...payload, views: 0 },
@@ -347,7 +355,7 @@ export default function SimulatorPage() {
     };
     load();
     return () => { cancelled = true; };
-  }, [stageSlots, data?.sources, youtubeByKey]);
+  }, [stageSlots, data?.sources, youtubeByKey, youtubeQuotaExceeded]);
 
   const scoring = useMemo(() => {
     const rows = stageSlots.map((slot) => {
@@ -626,7 +634,7 @@ export default function SimulatorPage() {
                             <strong>{row.slot!.songTitle}</strong>
                             <p className="row-meta">{row.slot!.artist}</p>
                             {row.youtube?.error ? (
-                              <p className="row-meta">{row.youtube.error}</p>
+                              <p className="row-meta row-meta--muted">YouTube unavailable</p>
                             ) : row.youtube?.url ? (
                               <p className="row-meta">
                                 <a href={row.youtube.url} target="_blank" rel="noreferrer">
@@ -634,6 +642,8 @@ export default function SimulatorPage() {
                                 </a>
                                 {" · "}{row.youtube.viewText}
                               </p>
+                            ) : youtubeQuotaExceeded ? (
+                              <p className="row-meta row-meta--muted">YouTube unavailable</p>
                             ) : (
                               <p className="row-meta">Fetching YouTube…</p>
                             )}
@@ -653,6 +663,50 @@ export default function SimulatorPage() {
         </section>
       )}
     </main>
+
+    {youtubeQuotaExceeded && !quotaPopupDismissed && (
+      <div
+        className="quota-popup-overlay"
+        onClick={() => setQuotaPopupDismissed(true)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}
+      >
+        <div
+          className="quota-popup"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#fff",
+            borderRadius: "16px",
+            padding: "2rem 1.75rem 1.5rem",
+            maxWidth: "360px",
+            width: "calc(100% - 2rem)",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.6rem",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+          }}
+        >
+          <span className="quota-popup-icon">📺</span>
+          <p className="quota-popup-title">YouTube search is currently down.</p>
+          <p className="quota-popup-body">
+            The simulator is still playable — scores will be based on digital &amp; album charts only.
+            Check back in a few hours or up to a day!
+          </p>
+          <button className="quota-popup-close" onClick={() => setQuotaPopupDismissed(true)}>
+            Got it
+          </button>
+        </div>
+      </div>
+    )}
     </>
   );
 }

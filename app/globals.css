@@ -433,6 +433,74 @@ h1, h2, h3, h4 {
   color: #be0b3c;
 }
 
+.quota-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  animation: quota-fade-in 0.15s ease;
+}
+
+@keyframes quota-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.quota-popup {
+  animation: quota-pop-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes quota-pop-in {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.quota-popup-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.quota-popup-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0d0b1e;
+}
+
+.quota-popup-body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #7264a0;
+}
+
+.quota-popup-close {
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.75rem;
+  background: #e8185a;
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.quota-popup-close:hover {
+  background: #c4134c;
+}
+
+.row-meta--muted {
+  color: var(--sim-muted);
+  font-style: italic;
+}
+
 .ranking-panel {
   margin-top: 1rem;
 }
@@ -789,12 +857,12 @@ h1, h2, h3, h4 {
   background: rgba(0, 0, 0, 0.5);
   color: rgba(255, 255, 255, 0.5);
   font-size: 14px;
+  line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  line-height: 1;
+  padding: 0 0 1px 0;
   transition: background 0.1s, color 0.1s;
 }
 
