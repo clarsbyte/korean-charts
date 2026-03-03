@@ -222,28 +222,28 @@ export default function StoryShareModal({
     const bgGradient = `linear-gradient(160deg, ${shadeColor(activeColor, 0.2)} 0%, ${activeColor} 45%, ${shadeColor(activeColor, -0.55)} 100%)`;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[200] flex items-start sm:items-center justify-center overflow-y-auto bg-black/80 backdrop-blur-sm p-4">
             {/* Container */}
-            <div className="relative w-full max-w-[400px] flex flex-col gap-4">
+            <div className="relative w-full max-w-[280px] sm:max-w-[400px] flex flex-col gap-3 sm:gap-4 my-4">
                 <button
                     onClick={onClose}
-                    className="absolute -top-12 right-0 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                    className="absolute -top-11 right-0 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     aria-label="Close"
                 >
-                    <X size={24} />
+                    <X size={20} className="sm:h-6 sm:w-6" />
                 </button>
 
                 {/* The Story Element that will be captures (aspect ratio 9:16) */}
                 <div
                     ref={storyRef}
-                    className="relative w-full aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl flex flex-col items-center justify-center p-8"
+                    className="relative w-full aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col items-center justify-center p-5 sm:p-8"
                     style={{ background: bgGradient }}
                 >
                     {/* Main Card inside Story */}
-                    <div className="w-full bg-black/40 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/10 flex flex-col items-center gap-6">
+                    <div className="w-full bg-black/40 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl border border-white/10 flex flex-col items-center gap-4 sm:gap-6">
 
                         {/* Album Art */}
-                        <div className="w-48 h-48 rounded-lg overflow-hidden bg-white/5 shadow-2xl relative">
+                        <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-white/5 shadow-2xl relative">
                             {imageUrl ? (
                                 <img
                                     src={imageUrl}
@@ -260,19 +260,19 @@ export default function StoryShareModal({
 
                         {/* Song Info */}
                         <div className="text-center w-full">
-                            <h2 className="text-2xl font-bold text-white mb-1 truncate">{songTitle}</h2>
-                            <p className="text-white/70 text-lg truncate">{artist}</p>
+                            <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 truncate">{songTitle}</h2>
+                            <p className="text-white/70 text-base sm:text-lg truncate">{artist}</p>
                         </div>
 
                         {/* Chart Stats */}
-                        <div className="w-full flex justify-center gap-x-6 gap-y-4 flex-wrap mt-2">
+                        <div className="w-full flex justify-center gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4 flex-wrap mt-1 sm:mt-2">
                             {chartStats.map((stat) => (
                                 <div key={stat.source} className="flex flex-col items-center">
                                     <span className="text-white/60 text-xs uppercase tracking-wider mb-1">
                                         {stat.source}
                                     </span>
                                     <div
-                                        className="flex items-center justify-center font-bold text-xl px-4 py-1.5 rounded-full"
+                                        className="flex items-center justify-center font-bold text-lg sm:text-xl px-3 sm:px-4 py-1 sm:py-1.5 rounded-full"
                                         style={{
                                             backgroundColor: SOURCE_COLORS[stat.source.toLowerCase()] || "#111",
                                             color: "white"
@@ -286,14 +286,14 @@ export default function StoryShareModal({
 
                     </div>
 
-                    <div className="absolute bottom-8 flex items-center gap-2 text-white/50 text-sm font-medium">
+                    <div className="absolute bottom-5 sm:bottom-8 flex items-center gap-2 text-white/50 text-xs sm:text-sm font-medium">
                         KCharts
                     </div>
                 </div>
 
-                <div className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-4 py-3 text-white">
+                <div className="w-full rounded-xl border border-white/10 bg-zinc-950/80 px-3 sm:px-4 py-3 text-white">
                     <p className="text-xs uppercase tracking-wider text-white/60 mb-2">Story Background</p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <button
                             onClick={() => setUseAutoColor(true)}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${useAutoColor
@@ -317,7 +317,7 @@ export default function StoryShareModal({
                             />
                         </label>
                         <span
-                            className="ml-auto h-6 w-6 rounded-md border border-white/20"
+                            className="sm:ml-auto h-6 w-6 rounded-md border border-white/20"
                             style={{ backgroundColor: activeColor }}
                             aria-hidden
                         />
@@ -325,22 +325,22 @@ export default function StoryShareModal({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-4 w-full">
+                <div className="flex gap-3 sm:gap-4 w-full">
                     <button
                         onClick={handleDownload}
                         disabled={isGenerating}
-                        className="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-xl flex items-center gap-2 justify-center transition-colors disabled:opacity-50"
+                        className="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl flex items-center gap-2 justify-center transition-colors disabled:opacity-50 text-sm sm:text-base"
                     >
-                        <Download size={20} />
+                        <Download size={18} className="sm:h-5 sm:w-5" />
                         Download
                     </button>
                     {canNativeShare && (
                         <button
                             onClick={handleShare}
                             disabled={isGenerating}
-                            className="flex-1 bg-white text-black font-semibold py-3 px-4 rounded-xl flex items-center gap-2 justify-center hover:bg-white/90 transition-colors disabled:opacity-50"
+                            className="flex-1 bg-white text-black font-semibold py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl flex items-center gap-2 justify-center hover:bg-white/90 transition-colors disabled:opacity-50 text-sm sm:text-base"
                         >
-                            <Share2 size={20} />
+                            <Share2 size={18} className="sm:h-5 sm:w-5" />
                             Share
                         </button>
                     )}
