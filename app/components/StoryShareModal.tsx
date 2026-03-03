@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { Download, Share2, X } from "lucide-react";
-import * as htmlToImage from "html-to-image";
 
 export type ChartStats = {
     source: string;
@@ -32,6 +31,7 @@ export default function StoryShareModal({
     onClose,
 }: StoryShareModalProps) {
     const EXPORT_WIDTH = 1080;
+    const EXPORT_HEIGHT = 1920;
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [imageError, setImageError] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -39,6 +39,7 @@ export default function StoryShareModal({
     const [useAutoColor, setUseAutoColor] = useState(true);
     const [manualColor, setManualColor] = useState("#333333");
     const storyRef = useRef<HTMLDivElement>(null);
+    const albumImageRef = useRef<HTMLImageElement | null>(null);
 
     const toDataUrl = async (url: string) => {
         try {
@@ -122,6 +123,23 @@ export default function StoryShareModal({
         };
     }, [songTitle, artist]);
 
+    // Pre-load album image into an Image element for canvas drawing
+    useEffect(() => {
+        if (!imageUrl) {
+            albumImageRef.current = null;
+            return;
+        }
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            albumImageRef.current = img;
+        };
+        img.onerror = () => {
+            albumImageRef.current = null;
+        };
+        img.src = imageUrl;
+    }, [imageUrl]);
+
     useEffect(() => {
         let cancelled = false;
 
@@ -194,33 +212,226 @@ export default function StoryShareModal({
         };
     }, [imageUrl]);
 
-    const generateImage = async () => {
-        if (!storyRef.current) return null;
+    const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+    const fallbackColor = useMemo(() => {
+        if (chartStats.length > 0) {
+            return SOURCE_COLORS[chartStats[0].source.toLowerCase()] || "#333333";
+        }
+        return "#333333";
+    }, [chartStats]);
+
+    const autoColor = imageBaseColor || fallbackColor;
+    const activeColor = useAutoColor ? autoColor : manualColor;
+    const bgGradient = `linear-gradient(160deg, ${shadeColor(activeColor, 0.2)} 0%, ${activeColor} 45%, ${shadeColor(activeColor, -0.55)} 100%)`;
+
+    /** Draw a rounded rectangle path */
+    const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    };
+
+    /** Measure text and truncate with ellipsis if needed */
+    const truncateText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
+        if (ctx.measureText(text).width <= maxWidth) return text;
+        let truncated = text;
+        while (truncated.length > 0 && ctx.measureText(truncated + "…").width > maxWidth) {
+            truncated = truncated.slice(0, -1);
+        }
+        return truncated + "…";
+    };
+
+    /** Load an image from a data URL / src into an HTMLImageElement, resolving when ready */
+    const loadImage = (src: string): Promise<HTMLImageElement | null> =>
+        new Promise((resolve) => {
+            const img = new window.Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+
+    const generateImage = useCallback(async () => {
+        const W = EXPORT_WIDTH;
+        const H = EXPORT_HEIGHT;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+
         try {
-            const previewWidth = storyRef.current.getBoundingClientRect().width || 360;
-            const targetPixelRatio = Math.max(2, EXPORT_WIDTH / previewWidth);
+            // Ensure the album image is loaded before drawing
+            let albumImg: HTMLImageElement | null = albumImageRef.current;
+            if (!albumImg && imageUrl) {
+                albumImg = await loadImage(imageUrl);
+            }
 
-            const images = Array.from(storyRef.current.querySelectorAll("img"));
-            await Promise.all(images.map(async (img) => {
-                if (img.complete && img.naturalWidth > 0) return;
-                try {
-                    await (img.decode?.() ?? Promise.resolve());
-                } catch {
-                    // Keep exporting even if an image decode fails.
+            // --- Background gradient (160deg) ---
+            const x0 = W * 0.15, y0 = 0, x1 = W * 0.85, y1 = H;
+            const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+            grad.addColorStop(0, shadeColor(activeColor, 0.2));
+            grad.addColorStop(0.45, activeColor);
+            grad.addColorStop(1, shadeColor(activeColor, -0.55));
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // --- Card dimensions ---
+            const cardPadX = 80;
+            const cardW = W - cardPadX * 2;
+            const cardX = cardPadX;
+            const cardRadius = 40;
+            const innerPad = 48;
+
+            // Calculate card height dynamically
+            const albumSize = 380;
+            const albumGap = 48;
+            const titleFontSize = 52;
+            const artistFontSize = 40;
+            const titleGap = 8;
+            const afterArtistGap = 40;
+            const statLabelFontSize = 24;
+            const statPillH = 60;
+            const statPillFontSize = 42;
+            const statRowGapY = 16;
+            const statLabelGap = 8;
+
+            // Stat rows layout
+            const statsPerRow = 3;
+            const statRows = Math.ceil(chartStats.length / statsPerRow);
+            const statsBlockH = statRows * (statLabelFontSize + statLabelGap + statPillH) + (statRows - 1) * statRowGapY;
+
+            const cardContentH = innerPad + albumSize + albumGap + titleFontSize + titleGap + artistFontSize + afterArtistGap + statsBlockH + innerPad;
+            const cardH = cardContentH;
+            const cardY = (H - cardH) / 2 - 40; // slightly above center
+
+            // Draw card background
+            roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fill();
+
+            // Card border
+            roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+            ctx.strokeStyle = "rgba(255,255,255,0.1)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // --- Album art ---
+            const albumX = cardX + (cardW - albumSize) / 2;
+            const albumY = cardY + innerPad;
+            const albumRadius = 20;
+
+            // Clip and draw album image
+            ctx.save();
+            roundRect(ctx, albumX, albumY, albumSize, albumSize, albumRadius);
+            ctx.clip();
+
+            if (albumImg) {
+                ctx.drawImage(albumImg, albumX, albumY, albumSize, albumSize);
+            } else {
+                // Fallback placeholder
+                ctx.fillStyle = "rgba(255,255,255,0.05)";
+                ctx.fillRect(albumX, albumY, albumSize, albumSize);
+                ctx.fillStyle = "rgba(255,255,255,0.4)";
+                ctx.font = `500 ${28}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(imageError ? "No Image" : "", albumX + albumSize / 2, albumY + albumSize / 2);
+            }
+            ctx.restore();
+
+            // --- Song title ---
+            const textMaxW = cardW - innerPad * 2;
+            const titleY = albumY + albumSize + albumGap + titleFontSize;
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `bold ${titleFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
+            const truncTitle = truncateText(ctx, songTitle, textMaxW);
+            ctx.fillText(truncTitle, W / 2, titleY);
+
+            // --- Artist ---
+            const artistY = titleY + titleGap + artistFontSize;
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+            ctx.font = `500 ${artistFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            const truncArtist = truncateText(ctx, artist, textMaxW);
+            ctx.fillText(truncArtist, W / 2, artistY);
+
+            // --- Chart stat pills ---
+            const statsStartY = artistY + afterArtistGap;
+            const statPillMinW = 120;
+            const statGapX = 36;
+
+            for (let row = 0; row < statRows; row++) {
+                const rowStats = chartStats.slice(row * statsPerRow, (row + 1) * statsPerRow);
+                const rowY = statsStartY + row * (statLabelFontSize + statLabelGap + statPillH + statRowGapY);
+
+                // Measure total row width to center it
+                const pillWidths = rowStats.map((stat) => {
+                    ctx.font = `bold ${statPillFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                    const textW = ctx.measureText(`#${stat.rank}`).width;
+                    return Math.max(statPillMinW, textW + 48);
+                });
+                const totalRowW = pillWidths.reduce((a, b) => a + b, 0) + (rowStats.length - 1) * statGapX;
+                let pillX = (W - totalRowW) / 2;
+
+                for (let i = 0; i < rowStats.length; i++) {
+                    const stat = rowStats[i];
+                    const pillW = pillWidths[i];
+                    const pillCenterX = pillX + pillW / 2;
+
+                    // Source label
+                    ctx.fillStyle = "rgba(255,255,255,0.6)";
+                    ctx.font = `600 ${statLabelFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "alphabetic";
+                    if ("letterSpacing" in ctx) ctx.letterSpacing = "2px";
+                    ctx.fillText(stat.source.toUpperCase(), pillCenterX, rowY + statLabelFontSize);
+                    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+
+                    // Pill background
+                    const pillY = rowY + statLabelFontSize + statLabelGap;
+                    const pillRadius = statPillH / 2;
+                    const bgColor = SOURCE_COLORS[stat.source.toLowerCase()] || "#111111";
+                    roundRect(ctx, pillX, pillY, pillW, statPillH, pillRadius);
+                    ctx.fillStyle = bgColor;
+                    ctx.fill();
+
+                    // Pill text
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = `bold ${statPillFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(`#${stat.rank}`, pillCenterX, pillY + statPillH / 2 + 2);
+
+                    pillX += pillW + statGapX;
                 }
-            }));
+            }
 
-            const dataUrl = await htmlToImage.toJpeg(storyRef.current, {
-                quality: 1,
-                cacheBust: true,
-                pixelRatio: targetPixelRatio,
-            });
-            return dataUrl;
+            // --- "KCharts" watermark ---
+            ctx.fillStyle = "rgba(255,255,255,0.5)";
+            ctx.font = `500 ${28}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText("KCharts", W / 2, H - 80);
+
+            return canvas.toDataURL("image/jpeg", 0.95);
         } catch (err) {
             console.error("Error generating image:", err);
             return null;
         }
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeColor, songTitle, artist, chartStats, imageError, imageUrl]);
 
     const handleDownload = async () => {
         setIsGenerating(true);
@@ -242,7 +453,6 @@ export default function StoryShareModal({
 
         if (dataUrl && navigator.share) {
             try {
-                // Convert base64 to blob for sharing
                 const blob = await fetch(dataUrl).then((r) => r.blob());
                 const file = new File([blob], "story.jpg", { type: "image/jpeg" });
 
@@ -257,19 +467,6 @@ export default function StoryShareModal({
             alert("Native sharing is not supported on this browser.");
         }
     };
-
-    const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-
-    const fallbackColor = useMemo(() => {
-        if (chartStats.length > 0) {
-            return SOURCE_COLORS[chartStats[0].source.toLowerCase()] || "#333333";
-        }
-        return "#333333";
-    }, [chartStats]);
-
-    const autoColor = imageBaseColor || fallbackColor;
-    const activeColor = useAutoColor ? autoColor : manualColor;
-    const bgGradient = `linear-gradient(160deg, ${shadeColor(activeColor, 0.2)} 0%, ${activeColor} 45%, ${shadeColor(activeColor, -0.55)} 100%)`;
 
     return (
         <div className="fixed inset-0 z-[200] flex items-start sm:items-center justify-center overflow-y-auto bg-black/80 backdrop-blur-sm p-4">
