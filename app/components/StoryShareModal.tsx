@@ -31,6 +31,7 @@ export default function StoryShareModal({
     chartStats,
     onClose,
 }: StoryShareModalProps) {
+    const EXPORT_WIDTH = 1080;
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [imageError, setImageError] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -66,7 +67,9 @@ export default function StoryShareModal({
                 );
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.imageUrl) {
+                    if (data.proxyImageUrl) {
+                        setImageUrl(data.proxyImageUrl);
+                    } else if (data.imageUrl) {
                         setImageUrl(data.imageUrl);
                     } else {
                         setImageError(true);
@@ -159,11 +162,23 @@ export default function StoryShareModal({
     const generateImage = async () => {
         if (!storyRef.current) return null;
         try {
-            // 1080x1920 is standard IG story size. We'll use scaling
-            // to ensure crisp text.
+            const previewWidth = storyRef.current.getBoundingClientRect().width || 360;
+            const targetPixelRatio = Math.max(2, EXPORT_WIDTH / previewWidth);
+
+            const images = Array.from(storyRef.current.querySelectorAll("img"));
+            await Promise.all(images.map(async (img) => {
+                if (img.complete && img.naturalWidth > 0) return;
+                try {
+                    await (img.decode?.() ?? Promise.resolve());
+                } catch {
+                    // Keep exporting even if an image decode fails.
+                }
+            }));
+
             const dataUrl = await htmlToImage.toJpeg(storyRef.current, {
-                quality: 0.95,
+                quality: 1,
                 cacheBust: true,
+                pixelRatio: targetPixelRatio,
             });
             return dataUrl;
         } catch (err) {

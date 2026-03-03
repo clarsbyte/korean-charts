@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 
+type FloImage = {
+  size?: number;
+  url?: string;
+};
+
+type FloTrack = {
+  album?: {
+    imgList?: FloImage[];
+  };
+};
+
+type FloSection = {
+  type?: string;
+  list?: FloTrack[];
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const keyword = searchParams.get("keyword");
@@ -28,18 +44,19 @@ export async function GET(request: Request) {
 
     // The FLO API has a specific deeply nested structure
     // Let's try to extract the first Track's 500x500 album image
-    let imageUrl = null;
+    let imageUrl: string | null = null;
 
     if (data?.data?.list) {
-      const trackSection = data.data.list.find((section: any) => section.type === "TRACK");
+      const sections = data.data.list as FloSection[];
+      const trackSection = sections.find((section) => section.type === "TRACK");
       if (trackSection?.list?.length > 0) {
         const firstTrack = trackSection.list[0];
         const albumImages = firstTrack?.album?.imgList;
         
         if (albumImages && albumImages.length > 0) {
           // Find the 500 size image or fallback to the largest available
-          const img500 = albumImages.find((img: any) => img.size === 500);
-          imageUrl = img500 ? img500.url : albumImages[albumImages.length - 1].url;
+          const img500 = albumImages.find((img) => img.size === 500);
+          imageUrl = img500?.url || albumImages[albumImages.length - 1]?.url || null;
         }
       }
     }
@@ -48,7 +65,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "No image found" }, { status: 404 });
     }
 
-    return NextResponse.json({ imageUrl });
+    const proxyImageUrl = `/api/flo-image/proxy?url=${encodeURIComponent(imageUrl)}`;
+    return NextResponse.json({ imageUrl, proxyImageUrl });
 
   } catch (error) {
     console.error("Error fetching FLO image:", error);
