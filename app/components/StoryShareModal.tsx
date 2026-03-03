@@ -288,14 +288,14 @@ export default function StoryShareModal({
                 {/* The Story Element that will be captures (aspect ratio 9:16) */}
                 <div
                     ref={storyRef}
-                    className="relative w-full aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col items-center justify-center p-5 sm:p-8"
+                    className="relative w-full aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden flex flex-col items-center justify-center p-5 sm:p-8"
                     style={{ background: bgGradient }}
                 >
                     {/* Main Card inside Story */}
-                    <div className="w-full bg-black/45 sm:bg-black/40 backdrop-blur-0 sm:backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg sm:shadow-xl border border-white/10 flex flex-col items-center gap-4 sm:gap-6">
+                    <div className="w-full bg-black/60 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 flex flex-col items-center gap-4 sm:gap-6">
 
                         {/* Album Art */}
-                        <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-white/5 shadow-lg sm:shadow-2xl relative">
+                        <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-white/5 relative">
                             {imageUrl ? (
                                 <img
                                     src={imageUrl}
