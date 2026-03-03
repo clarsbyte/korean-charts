@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const floUrl = `https://www.music-flo.com/api/search/v2/search/integration?keyword=${encodeURIComponent(
       keyword
     )}`;
-    
+
     // We fetch from the FLO API
     const response = await fetch(floUrl, {
       headers: {
@@ -49,10 +49,10 @@ export async function GET(request: Request) {
     if (data?.data?.list) {
       const sections = data.data.list as FloSection[];
       const trackSection = sections.find((section) => section.type === "TRACK");
-      if (trackSection?.list?.length > 0) {
+      if (trackSection?.list && trackSection.list.length > 0) {
         const firstTrack = trackSection.list[0];
         const albumImages = firstTrack?.album?.imgList;
-        
+
         if (albumImages && albumImages.length > 0) {
           // Find the 500 size image or fallback to the largest available
           const img500 = albumImages.find((img) => img.size === 500);
