@@ -61,7 +61,8 @@ export default function Home() {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\b(feat\.?|ft\.?|featuring|with)\b.*$/i, "")
       .replace(/[\(\[\{].*?[\)\]\}]/g, " ")
-      .replace(/[^a-z0-9\u3131-\u318e\uac00-\ud7a3]+/g, "")
+      .replace(/[^a-z0-9\u3131-\u318e\uac00-\ud7a3]+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
 
   const isSameTrack = (
@@ -75,14 +76,8 @@ export default function Home() {
     const baseArtistNorm = normalizeForMatch(baseArtist);
     const itemArtistNorm = normalizeForMatch(itemArtist);
 
-    const titleMatch =
-      baseTitleNorm === itemTitleNorm ||
-      baseTitleNorm.includes(itemTitleNorm) ||
-      itemTitleNorm.includes(baseTitleNorm);
-    const artistMatch =
-      baseArtistNorm === itemArtistNorm ||
-      baseArtistNorm.includes(itemArtistNorm) ||
-      itemArtistNorm.includes(baseArtistNorm);
+    const titleMatch = baseTitleNorm === itemTitleNorm;
+    const artistMatch = baseArtistNorm === itemArtistNorm;
 
     return titleMatch && artistMatch;
   };
@@ -94,11 +89,15 @@ export default function Home() {
     const stats: ChartStats[] = [];
 
     data.sources.forEach(source => {
+      if (source.source.toLowerCase() === "hanteo") return;
       const match = source.items.find(item =>
         isSameTrack(songTitle, artist, item.songTitle, item.artist)
       );
       if (match) {
-        stats.push({ source: source.source, rank: match.rank });
+        const rankNum = Number.parseInt(match.rank, 10);
+        if (Number.isFinite(rankNum) && rankNum >= 1 && rankNum <= 20) {
+          stats.push({ source: source.source, rank: match.rank });
+        }
       }
     });
 

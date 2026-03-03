@@ -40,6 +40,22 @@ export default function StoryShareModal({
     const [manualColor, setManualColor] = useState("#333333");
     const storyRef = useRef<HTMLDivElement>(null);
 
+    const toDataUrl = async (url: string) => {
+        try {
+            const res = await fetch(url, { cache: "force-cache" });
+            if (!res.ok) return null;
+            const blob = await res.blob();
+            return await new Promise<string | null>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch {
+            return null;
+        }
+    };
+
     const rgbToHex = (r: number, g: number, b: number) =>
         `#${[r, g, b]
             .map((value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0"))
@@ -59,6 +75,8 @@ export default function StoryShareModal({
 
     // Load the album cover
     useEffect(() => {
+        let cancelled = false;
+
         const fetchImage = async () => {
             try {
                 const query = `${songTitle} ${artist}`;
@@ -67,10 +85,25 @@ export default function StoryShareModal({
                 );
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.proxyImageUrl) {
-                        setImageUrl(data.proxyImageUrl);
-                    } else if (data.imageUrl) {
-                        setImageUrl(data.imageUrl);
+                    const candidateUrls: string[] = [data.proxyImageUrl, data.imageUrl].filter(Boolean);
+                    let safeDataUrl: string | null = null;
+                    let fallbackUrl: string | null = null;
+
+                    for (const url of candidateUrls) {
+                        if (!fallbackUrl) fallbackUrl = url;
+                        const converted = await toDataUrl(url);
+                        if (converted) {
+                            safeDataUrl = converted;
+                            break;
+                        }
+                    }
+
+                    if (cancelled) return;
+
+                    if (safeDataUrl) {
+                        setImageUrl(safeDataUrl);
+                    } else if (fallbackUrl) {
+                        setImageUrl(fallbackUrl);
                     } else {
                         setImageError(true);
                     }
@@ -83,6 +116,10 @@ export default function StoryShareModal({
         };
 
         fetchImage();
+
+        return () => {
+            cancelled = true;
+        };
     }, [songTitle, artist]);
 
     useEffect(() => {
