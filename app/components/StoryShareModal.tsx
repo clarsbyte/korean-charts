@@ -312,8 +312,10 @@ export default function StoryShareModal({
             const statsBlockH = statRows * (statLabelFontSize + statLabelGap + statPillH) + (statRows - 1) * statRowGapY;
 
             const cardContentH = innerPad + albumSize + albumGap + titleFontSize + titleGap + artistFontSize + afterArtistGap + statsBlockH + innerPad;
-            const cardH = cardContentH;
+            const minCardHeight = H * 0.68;
+            const cardH = Math.max(cardContentH, minCardHeight);
             const cardY = (H - cardH) / 2 - 40; // slightly above center
+            const contentOffsetY = (cardH - cardContentH) / 2;
 
             // Draw card background
             roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
@@ -328,7 +330,7 @@ export default function StoryShareModal({
 
             // --- Album art ---
             const albumX = cardX + (cardW - albumSize) / 2;
-            const albumY = cardY + innerPad;
+            const albumY = cardY + innerPad + contentOffsetY;
             const albumRadius = 20;
 
             // Clip and draw album image
@@ -487,7 +489,7 @@ export default function StoryShareModal({
                     style={{ background: bgGradient }}
                 >
                     {/* Main Card inside Story */}
-                    <div className="w-full bg-black/60 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 flex flex-col items-center gap-4 sm:gap-6">
+                    <div className="w-full min-h-[68%] bg-black/60 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 flex flex-col items-center justify-center gap-4 sm:gap-6">
 
                         {/* Album Art */}
                         <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-white/5 relative">
