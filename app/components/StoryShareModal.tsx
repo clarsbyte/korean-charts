@@ -133,8 +133,6 @@ export default function StoryShareModal({
 
             try {
                 const img = new window.Image();
-                img.crossOrigin = "anonymous";
-                img.referrerPolicy = "no-referrer";
 
                 const color = await new Promise<string | null>((resolve) => {
                     img.onload = () => {
@@ -301,7 +299,6 @@ export default function StoryShareModal({
                                     src={imageUrl}
                                     alt={songTitle}
                                     className="w-full h-full object-cover"
-                                    crossOrigin="anonymous"
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white/40">
