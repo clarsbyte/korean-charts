@@ -292,10 +292,10 @@ export default function StoryShareModal({
                     style={{ background: bgGradient }}
                 >
                     {/* Main Card inside Story */}
-                    <div className="w-full bg-black/40 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl border border-white/10 flex flex-col items-center gap-4 sm:gap-6">
+                    <div className="w-full bg-black/45 sm:bg-black/40 backdrop-blur-0 sm:backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg sm:shadow-xl border border-white/10 flex flex-col items-center gap-4 sm:gap-6">
 
                         {/* Album Art */}
-                        <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-white/5 shadow-2xl relative">
+                        <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-lg overflow-hidden bg-white/5 shadow-lg sm:shadow-2xl relative">
                             {imageUrl ? (
                                 <img
                                     src={imageUrl}
