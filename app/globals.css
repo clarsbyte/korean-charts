@@ -20,7 +20,10 @@ body {
   font-family: var(--font-body), "Plus Jakarta Sans", "Segoe UI", sans-serif;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: var(--font-display), "Syne", sans-serif;
 }
 
@@ -170,7 +173,8 @@ h1, h2, h3, h4 {
 
 .row {
   display: grid;
-  grid-template-columns: 2.4rem 1fr;
+  grid-template-columns: 2.4rem 1fr auto;
+  align-items: center;
   gap: 0.35rem;
   padding: 0.38rem 0.95rem;
   transition: background 0.1s;
@@ -238,12 +242,25 @@ h1, h2, h3, h4 {
   animation: dotFill 1.3s ease-in-out infinite;
 }
 
-.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes dotFill {
-  0%, 100%  { opacity: 0; }
-  40%, 60%  { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  40%,
+  60% {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 640px) {
@@ -309,6 +326,7 @@ h1, h2, h3, h4 {
 .hanteo-scroll::-webkit-scrollbar {
   height: 4px;
 }
+
 .hanteo-scroll::-webkit-scrollbar-thumb {
   background: #e8d5a3;
   border-radius: 2px;
@@ -351,6 +369,7 @@ h1, h2, h3, h4 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  line-clamp: 3;
   overflow: hidden;
 }
 
@@ -446,8 +465,13 @@ h1, h2, h3, h4 {
 }
 
 @keyframes quota-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .quota-popup {
@@ -455,8 +479,15 @@ h1, h2, h3, h4 {
 }
 
 @keyframes quota-pop-in {
-  from { transform: scale(0.88); opacity: 0; }
-  to   { transform: scale(1);    opacity: 1; }
+  from {
+    transform: scale(0.88);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .quota-popup-icon {
@@ -708,11 +739,9 @@ h1, h2, h3, h4 {
   display: flex;
   gap: 0.65rem;
   padding: 1.4rem 1.2rem 1.1rem;
-  background: radial-gradient(
-    ellipse 90% 55% at 50% 0%,
-    rgba(232, 24, 90, 0.06) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(ellipse 90% 55% at 50% 0%,
+      rgba(232, 24, 90, 0.06) 0%,
+      transparent 70%);
 }
 
 /* Each performer position */
@@ -927,6 +956,7 @@ h1, h2, h3, h4 {
 /*  Responsive  */
 
 @media (max-width: 680px) {
+
   /* Stage: 2-column grid instead of horizontal overflow */
   .sth-perf {
     display: grid;

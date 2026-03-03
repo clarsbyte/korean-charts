@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { MoreVertical } from "lucide-react";
+import StoryShareModal, { ChartStats } from "./components/StoryShareModal";
 
 type ChartItem = {
   rank: string;
@@ -46,6 +48,66 @@ export default function Home() {
   const [data, setData] = useState<ChartsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shareItem, setShareItem] = useState<{
+    songTitle: string;
+    artist: string;
+    chartStats: ChartStats[];
+  } | null>(null);
+
+  const normalizeForMatch = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\b(feat\.?|ft\.?|featuring|with)\b.*$/i, "")
+      .replace(/[\(\[\{].*?[\)\]\}]/g, " ")
+      .replace(/[^a-z0-9\u3131-\u318e\uac00-\ud7a3]+/g, "")
+      .trim();
+
+  const isSameTrack = (
+    baseTitle: string,
+    baseArtist: string,
+    itemTitle: string,
+    itemArtist: string
+  ) => {
+    const baseTitleNorm = normalizeForMatch(baseTitle);
+    const itemTitleNorm = normalizeForMatch(itemTitle);
+    const baseArtistNorm = normalizeForMatch(baseArtist);
+    const itemArtistNorm = normalizeForMatch(itemArtist);
+
+    const titleMatch =
+      baseTitleNorm === itemTitleNorm ||
+      baseTitleNorm.includes(itemTitleNorm) ||
+      itemTitleNorm.includes(baseTitleNorm);
+    const artistMatch =
+      baseArtistNorm === itemArtistNorm ||
+      baseArtistNorm.includes(itemArtistNorm) ||
+      itemArtistNorm.includes(baseArtistNorm);
+
+    return titleMatch && artistMatch;
+  };
+
+  const handleShareClick = (songTitle: string, artist: string) => {
+    if (!data) return;
+
+    // Aggregate stats from all sources for this song + artist
+    const stats: ChartStats[] = [];
+
+    data.sources.forEach(source => {
+      const match = source.items.find(item =>
+        isSameTrack(songTitle, artist, item.songTitle, item.artist)
+      );
+      if (match) {
+        stats.push({ source: source.source, rank: match.rank });
+      }
+    });
+
+    setShareItem({
+      songTitle,
+      artist,
+      chartStats: stats
+    });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -130,6 +192,13 @@ export default function Home() {
                           {item.album ? ` · ${item.album}` : ""}
                         </p>
                       </div>
+                      <button
+                        onClick={() => handleShareClick(item.songTitle, item.artist)}
+                        className="p-1.5 text-[var(--muted)] hover:text-[var(--accent)] transition-colors rounded-full hover:bg-[var(--line)]"
+                        aria-label={`Share ${item.songTitle} to Instagram Story`}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
                     </li>
                   ))}
                 </ol>
@@ -146,7 +215,7 @@ export default function Home() {
                 <span className="hanteo-label">HANTEO</span>
                 <span className="hanteo-sublabel">Album Chart</span>
               </div>
-      
+
             </div>
 
             {hanteoSource.error ? (
@@ -165,6 +234,15 @@ export default function Home() {
           </section>
         )}
       </main>
+
+      {shareItem && (
+        <StoryShareModal
+          songTitle={shareItem.songTitle}
+          artist={shareItem.artist}
+          chartStats={shareItem.chartStats}
+          onClose={() => setShareItem(null)}
+        />
+      )}
     </>
   );
 }
