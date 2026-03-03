@@ -54,30 +54,56 @@ export default function Home() {
     chartStats: ChartStats[];
   } | null>(null);
 
-  const normalizeForMatch = (value: string) =>
+  /** Normalize text: lowercase, strip brackets/feat, keep letters+numbers+spaces */
+  const normalizeText = (value: string) =>
     value
       .toLowerCase()
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\b(feat\.?|ft\.?|featuring|with)\b.*$/i, "")
-      .replace(/[\(\[\{].*?[\)\]\}]/g, " ")
-      .replace(/[^a-z0-9\u3131-\u318e\uac00-\ud7a3]+/g, " ")
+      .replace(/\(.*?\)|\[.*?\]/g, " ")
+      .replace(/feat\.?|ft\.?|featuring|with|prod\.?/gi, " ")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
       .replace(/\s+/g, " ")
       .trim();
 
+  /** Escape special regex characters */
+  const escapeRegExp = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  /** Build a regex that checks all significant tokens are present */
+  const toTokenRegex = (value: string): RegExp | null => {
+    const tokens = normalizeText(value)
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 10);
+    if (!tokens.length) return null;
+    return new RegExp(
+      tokens.map((t) => `(?=.*${escapeRegExp(t)})`).join("") + ".*",
+      "iu",
+    );
+  };
+
+  /** Token-based matching: checks that all significant tokens of one string appear in the other (bidirectional) */
   const isSameTrack = (
     baseTitle: string,
     baseArtist: string,
     itemTitle: string,
     itemArtist: string
   ) => {
-    const baseTitleNorm = normalizeForMatch(baseTitle);
-    const itemTitleNorm = normalizeForMatch(itemTitle);
-    const baseArtistNorm = normalizeForMatch(baseArtist);
-    const itemArtistNorm = normalizeForMatch(itemArtist);
+    const titleRegex = toTokenRegex(baseTitle);
+    const itemTitleRegex = toTokenRegex(itemTitle);
+    const artistRegex = toTokenRegex(baseArtist);
+    const itemArtistRegex = toTokenRegex(itemArtist);
 
-    const titleMatch = baseTitleNorm === itemTitleNorm;
-    const artistMatch = baseArtistNorm === itemArtistNorm;
+    // Title must match in at least one direction
+    const titleMatch = titleRegex
+      ? titleRegex.test(itemTitle) || (itemTitleRegex?.test(baseTitle) === true)
+      : itemTitleRegex
+        ? itemTitleRegex.test(baseTitle)
+        : normalizeText(baseTitle) === normalizeText(itemTitle);
+
+    // Artist must match in at least one direction (empty artist = always match)
+    const artistMatch = artistRegex
+      ? artistRegex.test(itemArtist) || (itemArtistRegex?.test(baseArtist) === true)
+      : true;
 
     return titleMatch && artistMatch;
   };
